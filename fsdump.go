@@ -35,6 +35,8 @@ type Dumper struct {
 	Src        FileSource
 	Dest       string
 	NumWorkers int
+	// intended for progress bars
+	ThroughputMonitor io.Writer
 }
 
 func (dumper *Dumper) Run() {
@@ -88,6 +90,11 @@ func (worker *worker) dumpFile(in *File) error {
 	}
 	defer out.Close()
 
-	_, err = io.CopyBuffer(out, in, worker.buffer)
+	wr := io.Writer(out)
+	if worker.dumper.ThroughputMonitor != nil {
+		wr = io.MultiWriter(wr, worker.dumper.ThroughputMonitor)
+	}
+
+	_, err = io.CopyBuffer(wr, in, worker.buffer)
 	return err
 }
